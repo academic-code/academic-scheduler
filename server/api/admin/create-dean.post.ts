@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
       type: 'recovery',
       email: body.email,
       options: {
-        redirectTo: 'http://localhost:3000/reset-password', // ✅ your password reset page
+        redirectTo: 'https://academic-scheduler-sepia.vercel.app/reset-password', // ✅ your password reset page
       },
     })
 
