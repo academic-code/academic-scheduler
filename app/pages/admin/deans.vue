@@ -260,15 +260,49 @@ async function handleSave() {
 
 
 async function deleteDean() {
-  if (!confirmDialog.value.item?.id) return
-  const { error } = await supabase.from('users').delete().eq('id', confirmDialog.value.item.id)
-  if (error) showAlert(error.message, 'error')
-  else {
-    showAlert('Dean deleted successfully.', 'success')
+  const dean = confirmDialog.value.item
+  if (!dean?.id) return
+
+  try {
+    // 1️⃣ Fetch dean's department_id
+    const { data: deptData, error: deptError } = await supabase
+      .from('users')
+      .select('department_id')
+      .eq('id', dean.id)
+      .single()
+
+    if (deptError) throw deptError
+    const departmentId = deptData?.department_id
+
+    if (!departmentId) {
+      showAlert("This dean has no department assigned.", "error")
+      return
+    }
+
+    // 2️⃣ Delete the entire department (this will CASCADE delete dean + all related data)
+    const { error: deleteError } = await supabase
+      .from('departments')
+      .delete()
+      .eq('id', departmentId)
+
+    if (deleteError) throw deleteError
+
+    // 3️⃣ Success
+    showAlert("Dean and all department records deleted successfully.", "success")
+
+    // 4️⃣ Refresh tables
     await fetchDeans()
+    if (typeof fetchDepartments === "function") {
+      await fetchDepartments()
+    }
+
+  } catch (err: any) {
+    showAlert(err.message || "Failed to delete dean.", "error")
   }
+
   confirmDialog.value.show = false
 }
+
 
 function confirmDelete(item: any) {
   confirmDialog.value = { show: true, item }

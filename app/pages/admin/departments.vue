@@ -211,23 +211,34 @@ async function saveDepartment() {
   🔹 Delete Department
 ──────────────── */
 async function deleteDepartment() {
-  if (!confirmDialog.value.item?.id) return
+  const dept = confirmDialog.value.item
+  if (!dept?.id) return
 
   try {
+    // 1️⃣ Delete the department — CASCADE handles everything else
     const { error } = await supabase
       .from('departments')
       .delete()
-      .eq('id', confirmDialog.value.item.id)
+      .eq('id', dept.id)
 
     if (error) throw error
 
-    confirmDialog.value.show = false
-    showAlert('Department deleted successfully.', 'success')
+    // 2️⃣ Success message
+    showAlert(
+      "Department and all its related records (deans, teachers, classes, subjects, schedules) were deleted successfully.",
+      "success"
+    )
+
+    // 3️⃣ Refresh table
     await fetchDepartments()
+
   } catch (err: any) {
-    showAlert(err.message, 'error')
+    showAlert(err.message || "Failed to delete department.", "error")
   }
+
+  confirmDialog.value.show = false
 }
+
 
 /* ────────────────
   🔹 Dialog Helpers
