@@ -1,140 +1,97 @@
 <template>
-  <v-container fluid class="pa-6">
-    <PageHeader title="Schedules" subtitle="Create and review class & teacher schedules" />
-
-    <v-row class="mb-4 align-center">
-      <v-col cols="12" md="4">
-        <v-select
-          v-model="filter.type"
-          :items="['All', 'By Class', 'By Teacher']"
-          label="View mode"
-          density="comfortable"
-        />
-      </v-col>
-
-      <v-col cols="12" md="4">
-        <v-autocomplete
-          v-if="filter.type !== 'All'"
-          v-model="filter.selected"
-          :items="filterItems"
-          item-title="display"
-          item-value="id"
-          :label="filter.type === 'By Class' ? 'Select Class' : 'Select Teacher'"
-          clearable
-          density="comfortable"
-        />
-      </v-col>
-
-      <v-col cols="12" md="4" class="text-md-end">
-        <v-btn color="primary" @click="openAddDialog" prepend-icon="mdi-plus">
-          Add Schedule
-        </v-btn>
-      </v-col>
-    </v-row>
-
-    <ScheduleGrid
-      :periods="periods"
-      :schedules="visibleSchedules"
-      :classes="classes"
-      :teachers="teachers"
-      :subjects="subjects"
-      @edit="openEditDialog"
-      @delete="confirmDelete"
+  <div class="schedules-page">
+    <ScheduleHeader
+      v-model:primaryTab="primaryTab"
+      v-model:secondaryTab="secondaryTab"
+      v-model:editMode="editMode"
+      v-model:selected="selectedItem"
+      :items="dropdownItems"
+      :views="views"
     />
 
-    <AddScheduleDialog
-      v-model:show="dialog"
-      :editing="editing"
-      :periods="periods"
-      :classes="classes"
-      :teachers="teachers"
-      :subjects="subjects"
-      @saved="onSaved"
-    />
-  </v-container>
+    <LayoutSwitcher v-model:layout="layout" />
+
+    <div class="table-wrapper">
+      <TimetableTable
+        :periods="periods"
+        :days="days"
+        :cells="cells"
+        :edit-mode="editMode"
+        :open-editor-key="openEditorKey"
+        @add-cell="openInlineEditor"
+        @edit-cell="openInlineEditor"
+        @delete-cell="deleteCell"
+      />
+    </div>
+  </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import PageHeader from '~/components/dean/PageHeader.vue'
-import ScheduleGrid from '~/components/ScheduleGrid.vue'
-import AddScheduleDialog from '~/components/AddScheduleDialog.vue'
-import { useSchedules } from '~/composables/dean/useSchedules'
-import { useToaster } from '~/composables/useToaster'
+<script setup>
+import { ref, computed } from 'vue'
+import ScheduleHeader from '@/components/timetable/ScheduleHeader.vue'
+import LayoutSwitcher from '@/components/timetable/LayoutSwitcher.vue'
+import TimetableTable from '@/components/timetable/TimetableTable.vue'
 
-interface FilterState {
-  type: 'All' | 'By Class' | 'By Teacher'
-  selected: string | null
-}
+// UI state
+const primaryTab = ref('weekly')
+const secondaryTab = ref('class')
+const editMode = ref(false)
+const selectedItem = ref(null)
+const layout = ref('vertical')
+const views = ref(0)
+const openEditorKey = ref(null)
 
-const { 
-  periods, schedules, classes, teachers, subjects,
-  fetchAll, createSchedule, updateSchedule, deleteSchedule
-} = useSchedules()
+// Data for dropdown
+const classList = [
+  { label: 'BSIT 2nd Year - A', value: 'bsit-2a' },
+  { label: 'BSIT 2nd Year - B', value: 'bsit-2b' }
+]
 
-const { toast } = useToaster()
+const teacherList = [
+  { label: 'Mark Kian', value: 'mark-kian' },
+  { label: 'Anna Cruz', value: 'anna-cruz' }
+]
 
-const dialog = ref(false)
-const editing = ref<any>(null)
+const dropdownItems = computed(() => secondaryTab.value === 'class' ? classList : teacherList)
 
-const filter = ref<FilterState>({
-  type: 'All',
-  selected: null,
+// Timetable structure
+const periods = [
+  { id: 'p1', name: 'Period 1', time: '07:00-07:30' },
+  { id: 'p2', name: 'Period 2', time: '07:30-08:00' }
+]
+
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Cell data store
+const cells = ref({
+  'p1-1': {
+    subject: 'IT113 PLATFORM TECHNOLOGIES',
+    teacher: 'Mark Kian',
+    className: 'BSIT 2nd Year-A'
+  }
 })
 
-const filterItems = computed(() => {
-  if (filter.value.type === 'By Class') {
-    return classes.value.map((c: any) => ({ id: c.id, display: `${c.name} ${c.section || ''}` }))
-  }
-  if (filter.value.type === 'By Teacher') {
-    return teachers.value.map((t: any) => ({ id: t.id, display: t.full_name }))
-  }
-  return []
-})
-
-const visibleSchedules = computed(() => {
-  if (filter.value.type === 'All') return schedules.value
-  if (!filter.value.selected) return []
-  if (filter.value.type === 'By Class') {
-    return schedules.value.filter((s: any) => s.class_id === filter.value.selected)
-  }
-  return schedules.value.filter((s: any) => s.teacher_id === filter.value.selected)
-})
-
-function openAddDialog() {
-  editing.value = null
-  dialog.value = true
+// Inline editor control
+function openInlineEditor({ periodId, dayIndex }) {
+  openEditorKey.value = `${periodId}-${dayIndex}`
 }
 
-function openEditDialog(item: any) {
-  editing.value = item
-  dialog.value = true
+function deleteCell({ periodId, dayIndex }) {
+  const key = `${periodId}-${dayIndex}`
+  delete cells.value[key]
 }
-
-async function confirmDelete(item: any) {
-  if (!item?.id) return
-  if (!confirm(`Delete schedule for ${item.day} ${item.start_time} - ${item.end_time}?`)) return
-  const { error } = await deleteSchedule(item.id)
-  if (error) toast(error, 'error')
-  else toast('Schedule deleted', 'success')
-}
-
-async function onSaved(result: { action: string; payload: any }) {
-  try {
-    if (result.action === 'create') {
-      const { error } = await createSchedule(result.payload)
-      if (error) toast(error, 'error')
-      else toast('Schedule created', 'success')
-    } else if (result.action === 'update') {
-      const { error } = await updateSchedule(result.payload.id, result.payload)
-      if (error) toast(error, 'error')
-      else toast('Schedule updated', 'success')
-    }
-    dialog.value = false
-  } catch (e: any) {
-    toast(e.message, 'error')
-  }
-}
-
-onMounted(fetchAll)
 </script>
+
+<style scoped>
+.schedules-page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.table-wrapper {
+  overflow: auto;
+  padding-top: 10px;
+}
+</style>
