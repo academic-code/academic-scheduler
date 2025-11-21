@@ -1,70 +1,27 @@
 <template>
-  <div class="layout-wrapper">
-    <span class="layout-label">Layout:</span>
+  <div class="layout-switcher">
+    <span class="label">Layout</span>
 
-    <!-- HORIZONTAL BUTTON -->
-    <v-btn
-      variant="outlined"
-      density="comfortable"
-      class="layout-btn"
-      :class="{ selected: layout === 'horizontal' }"
-      @click="emitLayout('horizontal')"
-    >
+    <button class="btn" :class="{ active: layout === 'horizontal' }" @click="$emit('update:layout','horizontal')">
       <i class="material-icons">compare_arrows</i>
       Horizontal
-    </v-btn>
+    </button>
 
-    <!-- VERTICAL BUTTON -->
-    <v-btn
-      variant="outlined"
-      density="comfortable"
-      class="layout-btn"
-      :class="{ selected: layout === 'vertical' }"
-      @click="emitLayout('vertical')"
-    >
+    <button class="btn" :class="{ active: layout === 'vertical' }" @click="$emit('update:layout','vertical')">
       <i class="material-icons">swap_vert</i>
       Vertical
-    </v-btn>
+    </button>
   </div>
 </template>
 
-<script setup>
-const props = defineProps({
-  layout: String
-})
-
+<script setup lang="ts">
+const props = defineProps<{ layout: string }>()
 const emit = defineEmits(['update:layout'])
-
-function emitLayout(val) {
-  emit('update:layout', val)
-}
 </script>
 
 <style scoped>
-.layout-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0 12px;
-}
-
-.layout-label {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.layout-btn {
-  border-color: #d1d5db !important;
-  text-transform: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #444;
-}
-
-.layout-btn.selected {
-  border-color: #1a73e8 !important;
-  background: rgba(26, 115, 232, 0.1) !important;
-  color: #1a73e8 !important;
-}
+.layout-switcher { display:flex; gap:10px; align-items:center; }
+.label { font-size:13px; color:#6b7280; margin-right:6px; }
+.btn { background:white; border:1px solid #e6eefc; padding:8px 12px; border-radius:8px; display:flex; gap:8px; align-items:center; cursor:pointer; font-size:13px; }
+.btn.active { border-color:#1a73e8; color:#1a73e8; background:rgba(26,115,232,0.06); }
 </style>
