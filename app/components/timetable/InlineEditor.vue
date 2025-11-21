@@ -33,47 +33,43 @@
     </div>
 
     <div class="actions">
-      <v-btn variant="outlined" class="btn" @click="emitClose"><i class="material-icons">close</i> Cancel</v-btn>
-      <v-btn variant="outlined" class="btn" @click="emitSavePending"><i class="material-icons">schedule</i> Pending</v-btn>
-      <v-btn color="primary" class="btn" @click="emitSave"><i class="material-icons">check</i> Save</v-btn>
+      <v-btn variant="outlined" class="btn" @click="emitClose">Cancel</v-btn>
+      <v-btn variant="outlined" class="btn" @click="emitSavePending"> Pending</v-btn>
+      <v-btn color="primary" class="btn" @click="emitSave">Save</v-btn>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
+import type { PropType } from 'vue'
 
 const props = defineProps({
   periodId: String,
   dayIndex: Number,
-  existing: Object as any
+  existing: Object as PropType<any>,
+
+  // dynamic options (label/value where value is the uuid)
+  subjectOptions: { type: Array as PropType<Array<{ label: string; value: string }>>, default: () => [] },
+  teacherOptions: { type: Array as PropType<Array<{ label: string; value: string }>>, default: () => [] }
 })
 
 const emit = defineEmits(['close', 'save', 'save-pending'])
 
-const subjectOptions = [
-  { label: 'IT113 PLATFORM TECHNOLOGIES', value: 'IT113' },
-  { label: 'IT102 PROGRAMMING', value: 'IT102' },
-  { label: 'DS101 DATA SCIENCE', value: 'DS101' }
-]
-
-const teacherOptions = [
-  { label: 'Mark Kian', value: 'Mark Kian' },
-  { label: 'Anna Cruz', value: 'Anna Cruz' },
-  { label: 'No Teacher', value: '' }
-]
-
+// initialize the form with IDs if available (existing schedule may provide subject_id / faculty_id)
 const form = reactive({
-  subject: props.existing?.subject ?? '',
-  teacher: props.existing?.teacher ?? ''
+  subject: props.existing?.subject_id ?? props.existing?.subject ?? '',
+  teacher: props.existing?.faculty_id ?? props.existing?.teacher ?? ''
 })
 
 const noTeacher = ref(false)
 watch(noTeacher, (val) => { if (val) form.teacher = '' })
 
 function emitClose() { emit('close') }
-function emitSave() { emit('save', { subject: form.subject, teacher: form.teacher }) }
-function emitSavePending() { emit('save-pending', { subject: form.subject, teacher: form.teacher }) }
+
+// emit only ID values; TimetableCell will augment with period/day and existing id
+function emitSave() { emit('save', { subject: form.subject || null, teacher: form.teacher || null }) }
+function emitSavePending() { emit('save-pending', { subject: form.subject || null, teacher: form.teacher || null }) }
 </script>
 
 <style scoped>

@@ -126,7 +126,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+
 type Item = { label: string; value: string }
 
 const props = defineProps<{
@@ -134,7 +135,18 @@ const props = defineProps<{
   secondaryTab: string
   editMode: boolean
   selected: string | null | undefined
+
+  /** Items will now be:
+   * CLASS MODE → classes
+   * TEACHER MODE → subjects
+   */
   items: Item[]
+
+  /** Full lists passed from parent */
+  allTeachers?: Array<{ id: string; full_name: string; allowed_subjects: string[] }>
+  allClasses?: Array<{ id: string; label: string }>
+  allSubjects?: Array<{ id: string; name: string }>
+
   views: number
   layout?: string
   subtitle?: string | null
@@ -145,6 +157,7 @@ const emit = defineEmits([
   'update:secondaryTab',
   'update:editMode',
   'update:selected',
+  'filtered-search-results',
   'update:layout'
 ])
 
@@ -154,15 +167,71 @@ watch(localSelected, (v) => emit('update:selected', v))
 const searchText = ref('')
 
 function onSearchUpdate(v: unknown) {
-  // purely cosmetic: we don't change app logic — emit selected as before
-  // keep the search text local; if you want to wire up, you can add event emit here
   searchText.value = String(v ?? '')
+  applySearchFiltering()
 }
 
-function onPrimaryTabUpdate(val: unknown) { emit('update:primaryTab', val as string) }
-function onSecondaryTab(val: 'class' | 'teacher') { emit('update:secondaryTab', val) }
-function onEditModeUpdate(val: unknown) { emit('update:editMode', val as boolean) }
+function onPrimaryTabUpdate(val: unknown) { 
+  emit('update:primaryTab', val as string) 
+}
+
+function onSecondaryTab(val: 'class' | 'teacher') { 
+  emit('update:secondaryTab', val)
+  searchText.value = ''
+  localSelected.value = null
+  applySearchFiltering()
+}
+
+function onEditModeUpdate(val: unknown) { 
+  emit('update:editMode', val as boolean) 
+}
+
+/* ============================================================
+   FILTERING LOGIC (THIS IS THE IMPORTANT PART)
+   ============================================================ */
+function applySearchFiltering() {
+
+  /* ----------------------------
+     CLASS TIMETABLE MODE
+     ---------------------------- */
+  if (props.secondaryTab === 'class') {
+    const filtered = (props.allClasses ?? []).filter(c =>
+      c.label.toLowerCase().includes(searchText.value.toLowerCase())
+    )
+    emit('filtered-search-results', filtered)
+    return
+  }
+
+  /* ----------------------------
+     TEACHER TIMETABLE MODE
+     ---------------------------- */
+  if (props.secondaryTab === 'teacher') {
+
+    const selectedSubjectId = localSelected.value ?? null
+
+    let filteredTeachers = props.allTeachers ?? []
+
+    // if subject selected → only show teachers who can teach that subject
+    if (selectedSubjectId) {
+      filteredTeachers = filteredTeachers.filter(t =>
+        t.allowed_subjects?.includes(selectedSubjectId)
+      )
+    }
+
+    // then apply search text
+    filteredTeachers = filteredTeachers.filter(t =>
+      t.full_name.toLowerCase().includes(searchText.value.toLowerCase())
+    )
+
+    emit('filtered-search-results', filteredTeachers)
+  }
+}
+
+// run when filter combo box changes (subject/class)
+watch(localSelected, () => applySearchFiltering())
+
 </script>
+
 
 <style scoped>
 .tt-header { display:flex; flex-direction:column; gap:14px; }

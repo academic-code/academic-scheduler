@@ -22,6 +22,8 @@
               :cell="cells ? cells[`${period.id}-${dayIndex}`] : undefined"
               :edit-mode="editMode"
               :open-editor-key="openEditorKey"
+              :subject-options="subjectOptions"
+              :teacher-options="teacherOptions"
               @add-cell="$emit('add-cell', $event)"
               @edit-cell="$emit('edit-cell', $event)"
               @delete-cell="$emit('delete-cell', $event)"
@@ -40,7 +42,7 @@
 import type { PropType } from 'vue'
 import TimetableCell from './TimetableCell.vue'
 
-type Period = { id: string; name: string; time: string }
+type Period = { id: string; name: string; time: string } // minimal
 
 const props = defineProps({
   periods: Array as PropType<Period[]>,
@@ -52,6 +54,19 @@ const props = defineProps({
     type: String as PropType<string | null>,
     required: false,
     default: null
+  },
+
+  // options forwarded from page
+  subjectOptions: {
+    type: Array as PropType<Array<{ label: string; value: string }>>,
+    required: false,
+    default: () => []
+  },
+
+  teacherOptions: {
+    type: Array as PropType<Array<{ label: string; value: string }>>,
+    required: false,
+    default: () => []
   }
 })
 
@@ -64,7 +79,6 @@ const emit = defineEmits([
   'save-pending'
 ])
 </script>
-
 
 <style scoped>
 .tt-table-wrap { background: white; border-radius: 12px; padding:16px; box-shadow: 0 6px 22px rgba(2,6,23,0.06); border:1px solid #eef6ff; }

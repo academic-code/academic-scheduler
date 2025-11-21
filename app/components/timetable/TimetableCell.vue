@@ -5,6 +5,8 @@
       :period-id="periodId"
       :day-index="dayIndex"
       :existing="cell"
+      :subject-options="subjectOptions"
+      :teacher-options="teacherOptions"
       @close="emitCloseEditor"
       @save="emitSaveEditor"
       @save-pending="emitSavePending"
@@ -43,6 +45,19 @@ const props = defineProps({
     type: String as PropType<string | null>,
     required: false,
     default: null
+  },
+
+  // forwarded options
+  subjectOptions: {
+    type: Array as PropType<Array<{ label: string; value: string }>>,
+    required: false,
+    default: () => []
+  },
+
+  teacherOptions: {
+    type: Array as PropType<Array<{ label: string; value: string }>>,
+    required: false,
+    default: () => []
   }
 })
 
@@ -61,37 +76,25 @@ const isEditing = computed(() => {
 })
 
 const placeholderText = computed(() => {
-  const shortDay = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][props.dayIndex] ?? 'Day'
+  const shortDay = ['Mon','Tue','Wed','Thu','Fri','Sat'][props.dayIndex] ?? 'Day'
   const period = String(props.periodId ?? '').replace(/^p/, 'Period ')
   return `${shortDay} - ${period}`
 })
 
-function emitAdd() {
-  emit('add-cell', { periodId: props.periodId, dayIndex: props.dayIndex })
+function emitAdd() { emit('add-cell', { periodId: props.periodId, dayIndex: props.dayIndex }) }
+function emitEdit() { emit('edit-cell', { periodId: props.periodId, dayIndex: props.dayIndex }) }
+function emitDelete() { emit('delete-cell', { periodId: props.periodId, dayIndex: props.dayIndex }) }
+function emitCloseEditor() { emit('close-editor') }
+function emitSaveEditor(data: any) { 
+  // augment payload with periodId and dayIndex and existing schedule id (if provided)
+  const payload = { ...data, periodId: props.periodId, dayIndex: props.dayIndex, id: props.cell?.id ?? undefined }
+  emit('save-editor', payload) 
 }
-
-function emitEdit() {
-  emit('edit-cell', { periodId: props.periodId, dayIndex: props.dayIndex })
-}
-
-function emitDelete() {
-  emit('delete-cell', { periodId: props.periodId, dayIndex: props.dayIndex })
-}
-
-function emitCloseEditor() {
-  emit('close-editor')
-}
-
-function emitSaveEditor(data: any) {
-  emit('save-editor', { ...data, periodId: props.periodId, dayIndex: props.dayIndex })
-}
-
-function emitSavePending(data: any) {
-  emit('save-pending', { ...data, periodId: props.periodId, dayIndex: props.dayIndex })
+function emitSavePending(data: any) { 
+  const payload = { ...data, periodId: props.periodId, dayIndex: props.dayIndex, id: props.cell?.id ?? undefined }
+  emit('save-pending', payload) 
 }
 </script>
-
-
 
 <style scoped>
 .cell-wrap { width:100%; min-height:64px; display:flex; align-items:center; }
